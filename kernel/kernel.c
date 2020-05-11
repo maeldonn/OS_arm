@@ -80,15 +80,36 @@ uint32_t sys_tick_cnt=0;
  */
 void sys_tick_cb()
 {
-	 tsk_prev = tsk_running;
-	 tsk_running -> status = TASK_READY;
+	   Task *t;
 
-	 tsk_running = tsk_running->next;
-	 tsk_running -> status = TASK_RUNNING;
+	    tsk_prev = tsk_running;
+	    tsk_running -> status = TASK_READY;
 
-	 sys_switch_ctx();
+	    int lsize = list_size(tsk_sleeping);
 
-//    list_display(tsk_running);
+
+	    while( tsk_sleeping && lsize)
+	    {
+	        tsk_sleeping -> delay -= SYS_TICK;
+	        if(tsk_sleeping-> delay <=0)
+	        {
+	            tsk_sleeping = list_remove_head(tsk_sleeping,&t);
+	            tsk_running = list_insert_tail(tsk_running,t);
+	            t -> status = TASK_READY;
+	        }
+	        if(tsk_sleeping) tsk_sleeping = tsk_sleeping -> next;
+	        lsize--;
+	    }
+
+
+
+	    tsk_running = tsk_running->next;
+	    tsk_running -> status = TASK_RUNNING;
+
+	    sys_switch_ctx();
+
+
+	//    list_display(tsk_running);
 }
 
 void SysTick_Handler(void)
@@ -224,7 +245,16 @@ int32_t sys_task_yield()
  */
 int32_t sys_task_wait(uint32_t ms)
 {
-	/* A COMPLETER */
+    Task *t;
+    tsk_running ->  status =  TASK_SLEEPING;
+    tsk_prev = tsk_running;
+    tsk_running -> delay = ms;
+
+    tsk_running = list_remove_head(tsk_running,&t);
+    tsk_sleeping=list_insert_head(tsk_sleeping,t);
+
+    tsk_running-> status=TASK_RUNNING;
+    sys_switch_ctx();
 
     return 0;
 }
