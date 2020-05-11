@@ -195,7 +195,7 @@ int32_t sys_task_new(TaskCode func, uint32_t stacksize)
 			// save stack frame
 			t->sp[17] = 0x01000000;  // thumb mode bit   // SR
 			t->sp[16] = (uint32_t)func;  // PC
-			t->sp[15]= 0;  // LR
+			t->sp[15]= (uint32_t)task_kill;  // LR
 			t->sp[1] = 0xFFFFFFFD; // EXC_RETURN code to return in thread mode
 			t->sp[0] = 0x1;		   // CONTROL thread mode privileged level => unprivileged
 
@@ -210,10 +210,16 @@ int32_t sys_task_new(TaskCode func, uint32_t stacksize)
  */
 int32_t sys_task_kill()
 {
-	/* A COMPLETER */
+    Task* t;
+    tsk_running = list_remove_head(tsk_running, &t);
+    tsk_prev=NULL;
+    free(t);
+    tsk_running -> status = TASK_RUNNING;
+    sys_switch_ctx();
 
-	return 0;
+    return 0;
 }
+
 
 /* sys_task_id
  *   returns id of task
