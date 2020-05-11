@@ -6,7 +6,7 @@
  * Generated linker script file for LPC55S69
  * Created from linkscript.ldt by FMCreateLinkLibraries
  * Using Freemarker v2.3.23
- * MCUXpresso IDE v11.1.1 [Build 3241] [2020-03-02] on 11 mai 2020 14:54:07
+ * MCUXpresso IDE v11.1.1 [Build 3241] [2020-03-02] on 11 mai 2020 16:13:37
  */
 
 INCLUDE "LPC55S69_OS_Debug_library.ld"

@@ -107,9 +107,47 @@ Semaphore *vfs_mutex;
  */
 int open(char *path, int flags)
 {
-	/* A COMPLETER */
-	
-    return -1;
+	int fd;
+	sem_p(vfs_mutex);
+	for(fd = 0; fd < MAX_OPENED_FDS ; fd++)
+	{
+	    if(opened_fds[fd] == NULL)
+	    {
+	        FileObject *f = (FileObject *)os_alloc(sizeof(FileObject));
+	        if (f)
+	        {
+	            f -> name = path;
+	            f -> offset = 0;
+	            f -> flags = flags;
+	            f -> dev = NULL;
+
+	            if(strcmp(f -> name,"/dev") == 0)
+	            {
+	                sem_v(vfs_mutex);
+	                return fd;
+	            }
+
+	            f -> dev = dev_lookup(path);
+	            if(f -> dev)
+	            {
+	                f -> flags |= F_IS_DEV;
+	            }
+
+	            if(f -> dev && f -> dev -> open && f -> dev -> open(f))
+	            {
+	                opened_fds[fd]=f;
+	                return fd;
+	            }
+	            else
+	            {
+	                os_free(f);
+	                sem_v(vfs_mutex);
+	                return -1;
+	            }
+	        }
+	    }
+	}
+	return -1;
 }
 
 /* close
@@ -127,8 +165,15 @@ int close(int fd)
  */
 int read(int fd, void *buf, size_t len)
 {
-	/* A COMPLETER */
-
+    FileObject *f=opened_fds[fd];
+    if(f)
+    {
+        Device *dev = f->dev;
+        if(dev && dev -> read)
+        {
+            return dev -> read(f,buf,len);
+        }
+    }
     return -1;
 }
 
