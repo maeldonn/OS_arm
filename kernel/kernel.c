@@ -42,7 +42,7 @@ int32_t svc_dispatch(uint32_t n, uint32_t args[])
       case 1:
     	  return (int32_t) malloc(args[0]);
       case 2:
-    	  free((void*)args[0]);
+    	  free((void)args[0]);
     	  return 0;
       case 3:
     	  return sys_os_start();
@@ -51,15 +51,15 @@ int32_t svc_dispatch(uint32_t n, uint32_t args[])
       case 5:
     	  return sys_task_id();
       case 6:
-    	  return sys_task_wait((uint32_t)args[0]);
+    	  return sys_task_wait(args[0]);
       case 7:
     	  return sys_task_kill();
       case 8:
-    	  return (int32_t)sys_sem_new((uint32_t)args[0]);
+    	  return (Semaphore)sys_sem_new((int32_t)args[0]);
       case 9:
-    	  return sys_sem_p((Semaphore *)args[0]);
+    	  return sys_sem_p((Semaphore)args[0]);
       case 10:
-    	  return sys_sem_v((Semaphore *)args[0]);
+    	  return sys_sem_v((Semaphore)args[0]);
     }
     return -1;
 }
