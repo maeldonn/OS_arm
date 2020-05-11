@@ -55,11 +55,11 @@ int32_t svc_dispatch(uint32_t n, uint32_t args[])
       case 7:
     	  return sys_task_kill();
       case 8:
-    	  return (Semaphore)sys_sem_new((int32_t)args[0]);
+    	  return (int32_t)sys_sem_new((int32_t)args[0]);
       case 9:
-    	  return sys_sem_p((Semaphore)args[0]);
+    	  return sys_sem_p((Semaphore *)args[0]);
       case 10:
-    	  return sys_sem_v((Semaphore)args[0]);
+    	  return sys_sem_v((Semaphore *)args[0]);
     }
     return -1;
 }
@@ -80,7 +80,13 @@ uint32_t sys_tick_cnt=0;
  */
 void sys_tick_cb()
 {
-	/* A COMPLETER */
+	 tsk_prev = tsk_running;
+	 tsk_running -> status = TASK_READY;
+
+	 tsk_running = tsk_running->next;
+	 tsk_running -> status = TASK_RUNNING;
+
+	 sys_switch_ctx();
 
 //    list_display(tsk_running);
 }
@@ -104,7 +110,8 @@ void SysTick_Handler(void)
  */
 int32_t sys_os_start()
 {
-	/* A COMPLETER */
+	tsk_running->status = TASK_RUNNING;
+	sys_switch_ctx();
 
     // Reset BASEPRI
     __set_BASEPRI(0);
@@ -149,12 +156,32 @@ void task_kill();
  */
 int32_t sys_task_new(TaskCode func, uint32_t stacksize)
 {
-	// get a stack with size multiple of 8 bytes
-	uint32_t size = stacksize>96 ? 8*(((stacksize-1)/8)+1) : 96;
-	
-	/* A COMPLETER */
+	// get a stack with size multiple of 8 bytes (cf. page 13)
+		uint32_t size = stacksize > 96 ? 8 * (((stacksize - 1) / 8) + 1) : 96;
 
-    return 0;
+		Task *t = (Task *)malloc(sizeof(Task) + size);
+
+		if (t != NULL)
+		{
+			t->id = id++;					// identifier
+			t->status = TASK_READY;			// task status : running, ready, ...
+			t->delay = 0;		   // waiting delay (for timeouts)
+
+			t-> splim = (uint32_t*)(t+1);  // bottom stack limit
+			t-> sp = t->splim + (size>>2); // top stack
+			t-> sp =  (t-> sp) -18; // push context
+
+			// save stack frame
+			t->sp[17] = 0x01000000;  // thumb mode bit   // SR
+			t->sp[16] = (uint32_t)func;  // PC
+			t->sp[15]= 0;  // LR
+			t->sp[1] = 0xFFFFFFFD; // EXC_RETURN code to return in thread mode
+			t->sp[0] = 0x1;		   // CONTROL thread mode privileged level => unprivileged
+
+			tsk_running = list_insert_tail(tsk_running, t);
+			return t->id;
+		}
+		return -1;
 }
 
 /* sys_task_kill
@@ -172,9 +199,14 @@ int32_t sys_task_kill()
  */
 int32_t sys_task_id()
 {
-	/* A COMPLETER */
-
-    return 0;
+	if(tsk_running)
+	{
+		return tsk_running->id;
+	}
+	else
+	{
+		return -1;
+	}
 }
 
 

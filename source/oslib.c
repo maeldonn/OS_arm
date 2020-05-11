@@ -87,7 +87,7 @@ void task_yield()
 /* task_wait
  *   suspend the current task until timeout
  */
-void  task_wait(uint32_t ms)
+void task_wait(uint32_t ms)
 {
 	__ASM volatile ("svc 6");
 }
