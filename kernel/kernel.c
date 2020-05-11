@@ -42,7 +42,7 @@ int32_t svc_dispatch(uint32_t n, uint32_t args[])
       case 1:
     	  return (int32_t) malloc(args[0]);
       case 2:
-    	  free((void)args[0]);
+    	  free((void*)args[0]);
     	  return 0;
       case 3:
     	  return sys_os_start();
@@ -161,7 +161,7 @@ int32_t sys_task_new(TaskCode func, uint32_t stacksize)
 
 		Task *t = (Task *)malloc(sizeof(Task) + size);
 
-		if (t != NULL)
+		if (t)
 		{
 			t->id = id++;					// identifier
 			t->status = TASK_READY;			// task status : running, ready, ...
@@ -240,9 +240,17 @@ int32_t sys_task_wait(uint32_t ms)
  */
 Semaphore * sys_sem_new(int32_t init)
 {
-	/* A COMPLETER */
+	Semaphore *sem=(Semaphore *)malloc(sizeof(Semaphore));
 
-    return NULL;
+	if(sem)
+	{
+	    sem -> count = init ;
+	    sem -> waiting = NULL;
+	    return sem;
+
+	}
+
+	return sem;
 }
 
 /* sys_sem_p
@@ -250,8 +258,25 @@ Semaphore * sys_sem_new(int32_t init)
  */
 int32_t sys_sem_p(Semaphore * sem)
 {
-	/* A COMPLETER */
+	Task *t;
+	if ( sem )
+	{
 
+	    sem -> count--;
+
+	    if(sem -> count < 0)
+	    {
+	        tsk_running -> status = TASK_WAITING;
+	        tsk_prev = tsk_running;
+
+	        tsk_running = list_remove_head( tsk_running, &t );
+	        sem -> waiting = list_insert_tail( sem -> waiting, t);
+
+	        tsk_running -> status = TASK_RUNNING;
+	        sys_switch_ctx();
+	    }
+	    return 0;
+	}
 	return -1;
 }
 
@@ -260,7 +285,20 @@ int32_t sys_sem_p(Semaphore * sem)
  */
 int32_t sys_sem_v(Semaphore * sem)
 {
-	/* A COMPLETER */
-
-	return -1;
+    Task *t;
+    if(sem)
+    {
+        sem -> count++;
+        if(sem -> waiting)
+        {
+            tsk_running -> status = TASK_READY;
+            tsk_prev = tsk_running;
+            sem -> waiting = list_remove_head( sem -> waiting, &t);
+            tsk_running = list_insert_head(tsk_running, t);
+            tsk_running -> status = TASK_RUNNING;
+            sys_switch_ctx();
+        }
+        return 0;
+    }
+    return -1;
 }
